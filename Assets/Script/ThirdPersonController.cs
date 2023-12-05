@@ -53,6 +53,8 @@ namespace StarterAssets
 
         [Space(10)]
         [SerializeField] private CinemachineVirtualCamera _cameraFollow;
+        [SerializeField] private float CameraLensSprint = 45f;
+        [SerializeField] private float CameraLensNormal = 40f;
 
         [Header("KnockBack")]
         public float mass = 2;
@@ -138,6 +140,7 @@ namespace StarterAssets
         private int _animIDMotionSpeed;
         private int _animIDStuned;
         private int _animIDRoll;
+        private int _animIDFly;
 
 #if ENABLE_INPUT_SYSTEM 
         private PlayerInput _playerInput;
@@ -151,10 +154,11 @@ namespace StarterAssets
 
         private bool _hasAnimator;
         private bool hasDoubleJump = false;
-        private Vector3 inputDirection;
+        [HideInInspector] public Vector3 inputDirection;
         private float _vel;
         private float c = 0.01f;
         private Vector3 knockDirection;
+        [HideInInspector] public bool isFly;
         
         
 
@@ -208,11 +212,21 @@ namespace StarterAssets
         private void Update()
         {
             _hasAnimator = TryGetComponent(out _animator);
-
-            JumpAndGravity();
+            if(isFly)
+            {
+                Fly();
+            }
+            else
+            {
+                JumpAndGravity();
+                StaminaSprint();
+                Move();
+                Fly();
+            }
+            
             GroundedCheck();
-            Move();
-            StaminaSprint();
+            
+            
         }
         private void FixedUpdate()
         {
@@ -235,6 +249,7 @@ namespace StarterAssets
             _animIDMotionSpeed = Animator.StringToHash("MotionSpeed");
             _animIDStuned = Animator.StringToHash("Stuned");
             _animIDRoll = Animator.StringToHash("Roll");
+            _animIDFly = Animator.StringToHash("Fly");
         }
 
         private void GroundedCheck()
@@ -375,11 +390,11 @@ namespace StarterAssets
         }
         private void CameraZoom()
         {
-            if(_input.sprint && _input.move != Vector2.zero && _cameraFollow.m_Lens.FieldOfView < 45f)
+            if(_input.sprint && _input.move != Vector2.zero && _cameraFollow.m_Lens.FieldOfView < CameraLensSprint)
             {
                 _cameraFollow.m_Lens.FieldOfView += SpeedChangeRate * Time.deltaTime;                
             }
-            if((!_input.sprint || _input.move == Vector2.zero) && _cameraFollow.m_Lens.FieldOfView > 40f)
+            if((!_input.sprint || _input.move == Vector2.zero) && _cameraFollow.m_Lens.FieldOfView > CameraLensNormal)
             {
                 _cameraFollow.m_Lens.FieldOfView -= SpeedChangeRate * Time.deltaTime;
             }
@@ -608,7 +623,6 @@ namespace StarterAssets
                     RespawnScreen.SetActive(false);
                 }
             }
-            
         }
 
         public void Knockback(Vector3 direction, float force)
@@ -620,6 +634,24 @@ namespace StarterAssets
             }
             _impact += direction.normalized * force / mass;
     	}
+
+        public void Fly()
+        {
+            if(isFly)
+            {
+                CameraLensNormal = 20f;
+                _verticalVelocity = -2f;
+            }
+            else
+            {
+                CameraLensNormal = 40f;
+            }
+            
+            if (_hasAnimator)
+            {
+                _animator.SetBool(_animIDFly, isFly);
+            }
+        }
 
 
         private static float ClampAngle(float lfAngle, float lfMin, float lfMax)
